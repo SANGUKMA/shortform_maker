@@ -75,7 +75,10 @@ def register():
             error_area = ui.column().classes("w-full")
 
         # UI 업데이트 함수 (타이머로 폴링 — UI 컨텍스트 안에서 실행됨)
+        error_shown = False
+
         def update_ui():
+            nonlocal error_shown
             progress_bar.set_value(ctx.overall_progress)
             status_label.set_text(ctx.status_message)
 
@@ -103,13 +106,14 @@ def register():
                 progress_bar.set_value(1.0)
                 ui.navigate.to(f"/result/{ctx.project_id}")
 
-            # 에러 발생 시
-            elif ctx.error:
+            # 에러 발생 시 (중복 방지)
+            elif ctx.error and not error_shown:
+                error_shown = True
                 timer.deactivate()
                 _running.pop(ctx.project_id, None)
                 _completed.pop(ctx.project_id, None)
                 with error_area:
-                    ui.label(f"오류: {ctx.error[:500]}").classes("text-red-400 text-center w-full")
+                    ui.label(f"오류: {ctx.error[:300]}").classes("text-red-400 text-center w-full")
                     ui.button(
                         "처음으로 돌아가기",
                         on_click=lambda: ui.navigate.to("/"),

@@ -111,12 +111,27 @@ def register():
 
             ui.separator()
 
-            # 업로드 상태
+            # 업로드 상태 — 라벨을 미리 생성하고 텍스트만 갱신 (DOM 비대화 방지)
             status_area = ui.column().classes("w-full gap-2")
+            with status_area:
+                status_header = ui.label("").classes("text-blue-400")
+                status_header.set_visibility(False)
+                status_labels: dict[int, ui.label] = {}
+                for idx in clip_settings:
+                    lbl = ui.label(f"클립 #{idx} 대기 중").classes("text-gray-400")
+                    status_labels[idx] = lbl
+                status_footer = ui.label("").classes("text-green-400 font-bold text-lg")
+                status_footer.set_visibility(False)
+                home_btn = ui.button(
+                    "처음으로",
+                    on_click=lambda: ui.navigate.to("/"),
+                    icon="home",
+                )
+                home_btn.set_visibility(False)
 
             async def do_upload():
-                with status_area:
-                    ui.label("업로드 시작...").classes("text-blue-400")
+                status_header.set_text("업로드 시작...")
+                status_header.set_visibility(True)
 
                 for idx, s in clip_settings.items():
                     file_path = project_dir / "final" / s["file"]
@@ -128,8 +143,9 @@ def register():
                     tags = [t.strip() for t in s["tags"].value.split(",") if t.strip()]
                     privacy = privacy_select.value
 
-                    with status_area:
-                        lbl = ui.label(f"클립 #{idx} '{title}' 업로드 중...")
+                    lbl = status_labels[idx]
+                    lbl.set_text(f"클립 #{idx} '{title}' 업로드 중...")
+                    lbl.classes(replace="text-blue-400")
 
                     try:
                         loop = asyncio.get_event_loop()
@@ -149,13 +165,9 @@ def register():
                         lbl.set_text(f"클립 #{idx} 업로드 실패: {e}")
                         lbl.classes(replace="text-red-400")
 
-                with status_area:
-                    ui.label("모든 업로드 완료!").classes("text-green-400 font-bold text-lg")
-                    ui.button(
-                        "처음으로",
-                        on_click=lambda: ui.navigate.to("/"),
-                        icon="home",
-                    )
+                status_footer.set_text("모든 업로드 완료!")
+                status_footer.set_visibility(True)
+                home_btn.set_visibility(True)
 
             with ui.row().classes("w-full justify-center gap-4"):
                 ui.button(
