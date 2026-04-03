@@ -1,0 +1,9 @@
+output/
+__pycache__/
+*.pyc
+.env
+token.pickle
+client_secret.json
+*.zip
+fonts/*.otf
+fonts/*.ttf

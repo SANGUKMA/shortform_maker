@@ -1,0 +1,49 @@
+# ClipForge 기본 설정
+
+# 영상 템플릿
+template:
+  bg_color: "#1B2A4A"       # "#1B2A4A" (네이비) 또는 "black" (검정) 선택
+  canvas_width: 1080
+  canvas_height: 1920
+  video_crf: 23
+  video_preset: "medium"
+
+# 상단 제목
+title:
+  font_size: 54
+  line_gap: 30
+  color: "white"
+  y: 80
+  border_width: 3
+  border_color: "black"
+
+# 하단 기관명
+org:
+  font_size: 38
+  color: "white"
+  y_offset: 120
+  border_width: 2
+  border_color: "black"
+  logo_path: ""             # 로고 PNG 경로 (비워두면 텍스트만 표시)
+
+# 자막
+subtitle:
+  font_name: "Malgun Gothic"
+  font_size: 24
+  outline: 2
+  margin_v: 340
+
+# 다운로드
+download:
+  max_resolution: 1080
+  format: "mp4"
+
+# Gemini
+gemini:
+  model: "gemini-2.5-flash"
+  max_video_duration: 3600
+
+# Whisper
+whisper:
+  model: "whisper-1"
+  language: "ko"

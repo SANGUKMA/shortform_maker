@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \":*)",
+      "Bash(taskkill //F //IM python.exe)",
+      "Bash(python -c \"import aiofiles; print\\(''aiofiles version:'', aiofiles.__version__\\)\")",
+      "Bash(pip show:*)"
+    ]
+  }
+}
