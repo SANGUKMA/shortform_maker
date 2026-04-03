@@ -24,14 +24,6 @@ def register():
             ui.button("처음으로", on_click=lambda: ui.navigate.to("/"))
             return
 
-        # 미디어 디렉토리 서빙 등록
-        final_dir = project_dir / "final"
-        shorts_dir = project_dir / "shorts"
-        if final_dir.exists():
-            app.add_media_files(f"/media/{project_id}/final", final_dir)
-        if shorts_dir.exists():
-            app.add_media_files(f"/media/{project_id}/shorts", shorts_dir)
-
         metadata = json.loads(meta_path.read_text(encoding="utf-8"))
         clips = metadata.get("clips", [])
 
@@ -142,8 +134,7 @@ def _download_all(project_id: str, clips: list, project_dir: Path):
                 fp = project_dir / "shorts" / clip["file"].replace("final_", "short_")
             if fp.exists():
                 zf.write(fp, clip["file"])
-    app.add_media_files(f"/download/{project_id}", project_dir)
-    ui.download(f"/download/{project_id}/{zip_path.name}")
+    ui.download(f"/media/{project_id}/{zip_path.name}")
 
 
 def _download_selected(project_id: str, selected: set, clips: list, project_dir: Path):
@@ -159,5 +150,4 @@ def _download_selected(project_id: str, selected: set, clips: list, project_dir:
                     fp = project_dir / "shorts" / clip["file"].replace("final_", "short_")
                 if fp.exists():
                     zf.write(fp, clip["file"])
-    app.add_media_files(f"/download/{project_id}", project_dir)
-    ui.download(f"/download/{project_id}/{zip_path.name}")
+    ui.download(f"/media/{project_id}/{zip_path.name}")
