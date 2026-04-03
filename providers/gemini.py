@@ -117,17 +117,20 @@ async def analyze_highlights(
     if video_file.state == "FAILED":
         raise RuntimeError(f"Gemini 영상 업로드 실패: {video_file.state}")
 
-    # 분석 요청 (최대 3회 재시도)
+    # 분석 요청 (최대 5회 재시도, 503 시 fallback 모델 사용)
     prompt = _build_prompt(clip_duration, clip_count, video_duration, transcript_segments)
-    max_retries = 3
+    models_to_try = [settings.GEMINI_MODEL, "gemini-2.0-flash"]
+    max_retries = 5
     response = None
 
     for attempt in range(1, max_retries + 1):
+        # 3회 이상 실패 시 fallback 모델로 전환
+        current_model = models_to_try[0] if attempt <= 3 else models_to_try[-1]
         try:
             response = await loop.run_in_executor(
                 None,
-                lambda: client.models.generate_content(
-                    model=settings.GEMINI_MODEL,
+                lambda m=current_model: client.models.generate_content(
+                    model=m,
                     contents=[
                         types.Content(
                             parts=[
@@ -147,7 +150,7 @@ async def analyze_highlights(
             )
             break
         except Exception as e:
-            _log.warning("Gemini 분석 요청 실패 (시도 %d/%d): %s", attempt, max_retries, e)
+            _log.warning("Gemini 분석 실패 (모델=%s, 시도 %d/%d): %s", current_model, attempt, max_retries, e)
             if attempt == max_retries:
                 raise
             await asyncio.sleep(5 * attempt)
