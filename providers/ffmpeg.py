@@ -126,9 +126,9 @@ def apply_template(
         vid_h = 1200  # 영상 높이 (상단/하단 네이비 각 360px)
         # 원본 16:9 영상을 9:10 비율로 center crop → 타겟 해상도로 scale
         scale_filter = f"crop=ih*9/10:ih,scale={cw}:{vid_h}"
-        fs = 78       # 제목: 큰 글씨
-        org_fs = 34   # 기관명
-        line_gap = 16
+        fs = 156      # 제목: 큰 글씨
+        org_fs = 68   # 기관명
+        line_gap = 32
     else:
         vid_h = cw * 9 // 16  # 608 (16:9)
         scale_filter = f"scale={cw}:{vid_h}"

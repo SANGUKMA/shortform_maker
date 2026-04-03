@@ -10,8 +10,8 @@ template:
 
 # 상단 제목
 title:
-  font_size: 54
-  line_gap: 30
+  font_size: 108
+  line_gap: 60
   color: "white"
   y: 80
   border_width: 3
@@ -19,7 +19,7 @@ title:
 
 # 하단 기관명
 org:
-  font_size: 38
+  font_size: 76
   color: "white"
   y_offset: 120
   border_width: 2
@@ -29,7 +29,7 @@ org:
 # 자막
 subtitle:
   font_name: "Black Han Sans"
-  font_size: 24
+  font_size: 48
   outline: 2
   margin_v: 340
 
