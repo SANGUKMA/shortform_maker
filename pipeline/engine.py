@@ -28,11 +28,26 @@ STEPS = [
 ]
 
 
+def _cleanup_old_projects(current_id: str) -> None:
+    """현재 프로젝트를 제외한 이전 프로젝트 디렉토리 삭제."""
+    from config import OUTPUT_DIR
+    if not OUTPUT_DIR.exists():
+        return
+    for d in OUTPUT_DIR.iterdir():
+        if d.is_dir() and d.name != current_id:
+            try:
+                shutil.rmtree(d)
+                _log.info("이전 프로젝트 삭제: %s", d.name)
+            except Exception as e:
+                _log.warning("이전 프로젝트 삭제 실패: %s (%s)", d.name, e)
+
+
 async def run_pipeline(
     ctx: PipelineContext,
     on_progress: Callable[[PipelineContext], None] | None = None,
 ) -> PipelineContext:
     """파이프라인 전체 실행."""
+    _cleanup_old_projects(ctx.project_id)
 
     def _notify():
         if on_progress:
