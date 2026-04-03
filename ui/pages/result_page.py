@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import zipfile
 from pathlib import Path
 
 from nicegui import app, ui
 
 from config import OUTPUT_DIR
+
+_log = logging.getLogger(__name__)
 
 
 def register():
@@ -64,11 +67,12 @@ def register():
                             ui.badge(f"{score}점", color=sc)
 
                         # 영상 미리보기
+                        _log.info("영상 파일 확인: %s (존재: %s)", video_file, video_file.exists())
                         if video_file.exists():
-                            subdir = "final" if "final" in str(video_file.parent) else "shorts"
-                            ui.video(
-                                f"/media/{project_id}/{subdir}/{video_file.name}"
-                            ).classes("w-full").props("controls")
+                            media_url = app.add_media_file(local_file=video_file)
+                            ui.video(media_url).classes("w-full").props("controls")
+                        else:
+                            ui.label("영상 파일 없음").classes("text-red-400 text-center w-full py-4")
 
                         # 제목 편집
                         ui.input(
@@ -134,7 +138,8 @@ def _download_all(project_id: str, clips: list, project_dir: Path):
                 fp = project_dir / "shorts" / clip["file"].replace("final_", "short_")
             if fp.exists():
                 zf.write(fp, clip["file"])
-    ui.download(f"/media/{project_id}/{zip_path.name}")
+    download_url = app.add_media_file(local_file=zip_path)
+    ui.download(download_url)
 
 
 def _download_selected(project_id: str, selected: set, clips: list, project_dir: Path):
@@ -150,4 +155,5 @@ def _download_selected(project_id: str, selected: set, clips: list, project_dir:
                     fp = project_dir / "shorts" / clip["file"].replace("final_", "short_")
                 if fp.exists():
                     zf.write(fp, clip["file"])
-    ui.download(f"/media/{project_id}/{zip_path.name}")
+    download_url = app.add_media_file(local_file=zip_path)
+    ui.download(download_url)

@@ -5,12 +5,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 
 from nicegui import app, ui
 
-from config import OUTPUT_DIR
 from ui.pages import input_page, progress_page, result_page, upload_page
-
-# output 디렉토리 미디어 서빙 (앱 시작 시 1회 등록)
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-app.add_media_files("/media", OUTPUT_DIR)
 
 # 페이지 등록
 input_page.register()
