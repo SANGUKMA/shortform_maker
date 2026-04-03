@@ -80,7 +80,8 @@ def cut_clip(
         "-i", str(input_path),
         "-t", f"{duration:.3f}",
         "-map", "0:v:0", "-map", "0:a:0",
-        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "18",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-threads", "2",
         "-c:a", "aac", "-b:a", "128k",
         str(output_path),
     ]
@@ -228,7 +229,7 @@ def apply_template(
             "-c:v", "libx264",
             "-preset", settings.VIDEO_PRESET,
             "-crf", str(settings.VIDEO_CRF),
-            "-threads", "8",
+            "-threads", "2",
             "-c:a", "aac", "-b:a", "128k",
             str(output_path),
         ]
@@ -247,7 +248,7 @@ def apply_template(
             "-c:v", "libx264",
             "-preset", settings.VIDEO_PRESET,
             "-crf", str(settings.VIDEO_CRF),
-            "-threads", "8",
+            "-threads", "2",
             "-c:a", "aac", "-b:a", "128k",
             str(output_path),
         ]
@@ -287,6 +288,7 @@ def burn_subtitles(
         "-c:v", "libx264",
         "-preset", settings.VIDEO_PRESET,
         "-crf", str(settings.VIDEO_CRF),
+        "-threads", "2",
         "-c:a", "copy",
         str(output_path),
     ]
