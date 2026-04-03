@@ -8,7 +8,7 @@ from pathlib import Path
 from nicegui import app, ui
 
 from config import OUTPUT_DIR
-from providers.youtube import check_auth, get_authenticated_service, upload_video
+from providers.youtube import check_auth, get_auth_url, upload_video
 
 
 def register():
@@ -41,20 +41,17 @@ def register():
             ui.label("YouTube 업로드 설정").classes("text-3xl font-bold text-center w-full")
 
             # 인증 상태 확인
-            is_authed = check_auth()
+            creds = state.get("youtube_creds")
+            is_authed = check_auth(creds)
             if not is_authed:
                 with ui.card().classes("w-full p-4 bg-yellow-900"):
                     ui.label("YouTube 인증이 필요합니다.").classes("font-bold")
-                    ui.label("아래 버튼을 클릭하면 브라우저에서 Google 로그인 창이 열립니다.")
+                    ui.label("아래 버튼을 클릭하면 Google 로그인 페이지로 이동합니다.")
 
-                    async def do_auth():
-                        try:
-                            loop = asyncio.get_event_loop()
-                            await loop.run_in_executor(None, get_authenticated_service)
-                            ui.notify("YouTube 인증 완료!", type="positive")
-                            ui.navigate.to(f"/upload/{project_id}")
-                        except Exception as e:
-                            ui.notify(f"인증 실패: {e}", type="negative")
+                    def do_auth():
+                        state["oauth_return_to"] = f"/upload/{project_id}"
+                        auth_url = get_auth_url()
+                        ui.navigate.to(auth_url, new_tab=False)
 
                     ui.button("YouTube 인증", on_click=do_auth, icon="login").props(
                         "color=red"
@@ -133,6 +130,8 @@ def register():
                 status_header.set_text("업로드 시작...")
                 status_header.set_visibility(True)
 
+                user_creds = state.get("youtube_creds")
+
                 for idx, s in clip_settings.items():
                     file_path = project_dir / "final" / s["file"]
                     if not file_path.exists():
@@ -149,9 +148,10 @@ def register():
 
                     try:
                         loop = asyncio.get_event_loop()
-                        video_id = await loop.run_in_executor(
+                        video_id, updated_creds = await loop.run_in_executor(
                             None,
                             lambda: upload_video(
+                                creds_dict=user_creds,
                                 file_path=file_path,
                                 title=title,
                                 description=desc,
@@ -159,6 +159,10 @@ def register():
                                 privacy=privacy,
                             ),
                         )
+                        # 갱신된 토큰 저장
+                        user_creds = updated_creds
+                        state["youtube_creds"] = updated_creds
+
                         lbl.set_text(f"클립 #{idx} 업로드 완료! ID: {video_id}")
                         lbl.classes(replace="text-green-400")
                     except Exception as e:
@@ -181,3 +185,40 @@ def register():
                     on_click=lambda: ui.navigate.to(f"/result/{project_id}"),
                     icon="arrow_back",
                 ).props("size=lg outline")
+
+    @ui.page("/oauth/callback")
+    async def oauth_callback():
+        """Google OAuth 콜백 — 인증 코드를 토큰으로 교환 후 리다이렉트."""
+        ui.dark_mode(True)
+        with ui.column().classes("mx-auto max-w-md w-full p-8 gap-4 items-center"):
+            spinner = ui.spinner("dots", size="xl")
+            status = ui.label("YouTube 인증 처리 중...").classes("text-center text-lg")
+
+        async def process_code():
+            from providers.youtube import exchange_code
+
+            code = await ui.run_javascript(
+                "new URLSearchParams(window.location.search).get('code')"
+            )
+            if not code:
+                spinner.set_visibility(False)
+                status.set_text("인증 코드를 받지 못했습니다.")
+                status.classes(add="text-red-400")
+                return
+
+            try:
+                loop = asyncio.get_event_loop()
+                creds_dict = await loop.run_in_executor(None, exchange_code, code)
+                app.storage.user["youtube_creds"] = creds_dict
+
+                status.set_text("인증 완료! 리다이렉트 중...")
+                status.classes(add="text-green-400")
+
+                return_to = app.storage.user.get("oauth_return_to", "/")
+                ui.navigate.to(return_to)
+            except Exception as e:
+                spinner.set_visibility(False)
+                status.set_text(f"인증 실패: {e}")
+                status.classes(add="text-red-400")
+
+        ui.timer(0.5, process_code, once=True)

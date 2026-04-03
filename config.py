@@ -33,9 +33,10 @@ class Settings:
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 
-    # YouTube OAuth
-    YOUTUBE_CLIENT_SECRET: str = os.getenv("YOUTUBE_CLIENT_SECRET", "client_secret.json")
-    YOUTUBE_TOKEN_PATH: str = os.getenv("YOUTUBE_TOKEN_PATH", "token.pickle")
+    # YouTube OAuth (Web)
+    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    APP_URL: str = os.getenv("APP_URL", "http://localhost:8080")
 
     # Template
     BG_COLOR: str = _tpl.get("bg_color", "#1B2A4A")
