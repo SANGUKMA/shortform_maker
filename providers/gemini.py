@@ -119,7 +119,7 @@ async def analyze_highlights(
 
     # 분석 요청 (최대 5회 재시도, 503 시 fallback 모델 사용)
     prompt = _build_prompt(clip_duration, clip_count, video_duration, transcript_segments)
-    models_to_try = [settings.GEMINI_MODEL, "gemini-1.5-flash"]
+    models_to_try = [settings.GEMINI_MODEL, "gemini-2.5-flash-lite"]
     max_retries = 5
     response = None
 
