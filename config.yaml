@@ -28,7 +28,7 @@ org:
 
 # 자막
 subtitle:
-  font_name: "Malgun Gothic"
+  font_name: "Black Han Sans"
   font_size: 24
   outline: 2
   margin_v: 340

@@ -4,7 +4,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from config import settings
+from config import settings, FONTS_DIR
 
 
 import logging
@@ -279,7 +279,8 @@ def burn_subtitles(
         f"MarginV={settings.SUB_MARGIN_V},"
         f"Bold=1"
     )
-    vf = f"subtitles='{srt_str}':force_style='{force_style}'"
+    fonts_dir = str(FONTS_DIR).replace("\\", "/").replace(":", "\\:")
+    vf = f"subtitles='{srt_str}':fontsdir='{fonts_dir}':force_style='{force_style}'"
 
     cmd = [
         "ffmpeg", "-nostdin", "-y",

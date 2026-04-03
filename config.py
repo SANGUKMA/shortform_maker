@@ -80,7 +80,7 @@ class Settings:
 
     # Font
     DEFAULT_FONT: str = str(FONTS_DIR / "BlackHanSans.ttf")
-    FALLBACK_FONT: str = "C:/Windows/Fonts/malgunbd.ttf"
+    FALLBACK_FONT: str = "/usr/share/fonts/truetype/custom/BlackHanSans.ttf"
 
     @classmethod
     def get_font(cls) -> str:

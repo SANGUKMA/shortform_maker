@@ -5,5 +5,3 @@ __pycache__/
 token.pickle
 client_secret.json
 *.zip
-fonts/*.otf
-fonts/*.ttf
