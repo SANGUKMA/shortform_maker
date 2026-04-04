@@ -34,7 +34,7 @@ def _cleanup_old_projects(current_id: str) -> None:
     if not OUTPUT_DIR.exists():
         return
     for d in OUTPUT_DIR.iterdir():
-        if d.is_dir() and d.name != current_id:
+        if d.is_dir() and d.name != current_id and d.name != "uploads":
             try:
                 shutil.rmtree(d)
                 _log.info("이전 프로젝트 삭제: %s", d.name)
