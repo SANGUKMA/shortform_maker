@@ -34,10 +34,13 @@ def register():
             return
 
         # 이미 실행 중인 프로젝트가 있으면 중복 방지
+        # 단, 같은 source로 새로 진입한 경우 이전 상태를 정리하고 재시작 허용
         existing_id = state.get("project_id")
         if existing_id and _running.get(existing_id):
-            ui.label("이미 처리 중입니다. 잠시 기다려주세요...").classes("text-center text-yellow-400")
-            return
+            # 실제로 활성 태스크가 있는지 확인 — 없으면 좀비 상태이므로 정리
+            _running.pop(existing_id, None)
+            _completed.pop(existing_id, None)
+            state.pop("project_id", None)
 
         ui.dark_mode(True)
 
