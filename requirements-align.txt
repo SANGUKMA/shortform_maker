@@ -1,0 +1,5 @@
+# 클립 경계 정렬(wav2vec2) — 로컬 전용 선택 기능. Railway/Docker에는 설치하지 않는다.
+# 설치: pip install -r requirements.txt -r requirements-align.txt
+# 사용: .env에 ALIGN_ENABLED=true (첫 실행 때 한국어 모델 약 1.3GB를 ~/.cache/huggingface에 받는다)
+torch>=2.4
+transformers>=4.40

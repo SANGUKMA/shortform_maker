@@ -1,14 +1,13 @@
-"""Step 6: 출력 준비 — 최종 파일 확인, YouTube 메타데이터 자동 생성, 저장."""
+"""Step 6: 출력 준비 — 최종 파일 확인, 메타데이터 저장.
+
+YouTube 설명/태그는 Step 2에서 하이라이트와 함께 생성된다.
+"""
 from __future__ import annotations
 
 import json
-import logging
 from typing import Callable
 
 from pipeline.context import PipelineContext
-from providers.gemini import generate_metadata
-
-_log = logging.getLogger(__name__)
 
 
 async def run(ctx: PipelineContext, notify: Callable) -> None:
@@ -31,31 +30,11 @@ async def run(ctx: PipelineContext, notify: Callable) -> None:
             "title_line2": highlight.title_line2,
             "summary": highlight.summary,
             "score": highlight.score,
+            "description": highlight.description or highlight.summary,
+            "tags": highlight.tags,
             "file": str(final_path.name),
             "file_size_mb": round(final_path.stat().st_size / (1024 * 1024), 1),
         })
-
-    # Gemini로 YouTube 설명/태그 자동 생성
-    ctx.update_progress(7, 0.4, "YouTube 메타데이터 생성 중...")
-    notify()
-
-    try:
-        meta_list = await generate_metadata(
-            video_title=ctx.video_title,
-            org_name=ctx.org_name,
-            clips=clips_info,
-        )
-        # 생성된 메타데이터를 클립 정보에 병합
-        meta_by_idx = {m["index"]: m for m in meta_list}
-        for clip in clips_info:
-            m = meta_by_idx.get(clip["index"], {})
-            clip["description"] = m.get("description", clip["summary"])
-            clip["tags"] = m.get("tags", [])
-    except Exception as e:
-        _log.warning("메타데이터 자동 생성 실패 (기본값 사용): %s", e)
-        for clip in clips_info:
-            clip["description"] = clip["summary"]
-            clip["tags"] = []
 
     # 메타데이터 JSON 저장
     metadata = {

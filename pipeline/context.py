@@ -15,10 +15,12 @@ class Highlight:
     title_line1: str    # 제목 1줄 (흰색)
     title_line2: str    # 제목 2줄 (노란색)
     summary: str
-    start: str          # "HH:MM:SS"
-    end: str            # "HH:MM:SS"
+    start: str          # "HH:MM:SS.mmm"
+    end: str            # "HH:MM:SS.mmm"
     score: int          # 0-100
     reason: str = ""
+    description: str = ""                           # YouTube 설명
+    tags: list[str] = field(default_factory=list)   # YouTube 태그
 
 
 @dataclass

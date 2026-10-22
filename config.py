@@ -24,13 +24,14 @@ _title = _yaml.get("title", {})
 _org = _yaml.get("org", {})
 _sub = _yaml.get("subtitle", {})
 _dl = _yaml.get("download", {})
-_gem = _yaml.get("gemini", {})
+_claude = _yaml.get("claude", {})
 _wh = _yaml.get("whisper", {})
+_align = _yaml.get("align", {})
 
 
 class Settings:
     # API Keys
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 
     # YouTube OAuth (Web)
@@ -71,13 +72,18 @@ class Settings:
     MAX_RESOLUTION: int = _dl.get("max_resolution", 1080)
     DOWNLOAD_FORMAT: str = _dl.get("format", "mp4")
 
-    # Gemini
-    GEMINI_MODEL: str = _gem.get("model", "gemini-2.5-flash")
-    MAX_VIDEO_DURATION: int = _gem.get("max_video_duration", 3600)
+    # Claude (하이라이트 선택 + 메타데이터)
+    CLAUDE_MODEL: str = _claude.get("model", "claude-haiku-5-5")
+    CLAUDE_MIN_SCORE: int = _claude.get("min_score", 40)
 
     # Whisper
     WHISPER_MODEL: str = _wh.get("model", "whisper-1")
     WHISPER_LANG: str = _wh.get("language", "ko")
+    WHISPER_NO_SPEECH_THRESHOLD: float = _wh.get("no_speech_threshold", 0.3)
+
+    # 경계 정렬 (wav2vec2) — PyTorch가 필요해 로컬 .env에서만 켠다
+    ALIGN_ENABLED: bool = os.getenv("ALIGN_ENABLED", "").lower() in ("1", "true", "yes")
+    ALIGN_MODEL: str = _align.get("model", "kresnik/wav2vec2-large-xlsr-korean")
 
     # Font
     DEFAULT_FONT: str = str(FONTS_DIR / "BlackHanSans.ttf")

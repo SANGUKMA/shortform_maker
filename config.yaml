@@ -38,12 +38,18 @@ download:
   max_resolution: 720
   format: "mp4"
 
-# Gemini
-gemini:
-  model: "gemini-2.5-flash"
-  max_video_duration: 3600
+# Claude (전사본에서 하이라이트 선택 + YouTube 설명/태그 생성)
+claude:
+  model: "claude-haiku-5-5"
+  min_score: 40               # 이 점수 미만 클립은 버림 (개수 설정보다 우선)
 
 # Whisper
 whisper:
   model: "whisper-1"
   language: "ko"
+  no_speech_threshold: 0.3    # "말이 아닐 확률"이 이 값 이상인 문장은 음악·무음으로 보고 제외
+                              # 실측: 설교 최대 0.12 / 찬양 중앙값 0.53 / 음악 중앙값 0.82
+
+# 클립 경계 정렬 (wav2vec2) — 켜고 끄기는 .env의 ALIGN_ENABLED (로컬 전용)
+align:
+  model: "kresnik/wav2vec2-large-xlsr-korean"

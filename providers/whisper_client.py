@@ -11,11 +11,29 @@ from config import settings
 MAX_FILE_SIZE = 25 * 1024 * 1024
 
 
+def _segment_dict(s, offset: float = 0.0) -> dict:
+    """verbose_json 세그먼트(dict 또는 객체)를 dict로 변환한다.
+
+    no_speech_prob / avg_logprob / compression_ratio는 음악·무음에서
+    지어낸 문장(환각)을 걸러내는 데 쓴다.
+    """
+    get = s.get if isinstance(s, dict) else lambda k, d=None: getattr(s, k, d)
+    return {
+        "start": get("start") + offset,
+        "end": get("end") + offset,
+        "text": (get("text", "") or "").strip(),
+        "no_speech_prob": get("no_speech_prob", 0.0),
+        "avg_logprob": get("avg_logprob", 0.0),
+        "compression_ratio": get("compression_ratio", 0.0),
+    }
+
+
 def transcribe_full(audio_path: Path) -> dict:
     """전체 오디오를 전사하여 segment-level 타임스탬프를 반환한다.
 
     Returns:
-        {"text": str, "segments": [{"start": float, "end": float, "text": str}, ...]}
+        {"text": str, "segments": [{"start", "end", "text", "no_speech_prob",
+                                    "avg_logprob", "compression_ratio"}, ...]}
     """
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
@@ -32,13 +50,7 @@ def transcribe_full(audio_path: Path) -> dict:
             timestamp_granularities=["segment"],
         )
 
-    segments = []
-    for s in (result.segments or []):
-        start = s["start"] if isinstance(s, dict) else s.start
-        end = s["end"] if isinstance(s, dict) else s.end
-        text = (s.get("text", "") if isinstance(s, dict) else (s.text or "")).strip()
-        segments.append({"start": start, "end": end, "text": text})
-
+    segments = [_segment_dict(s) for s in (result.segments or [])]
     return {"text": result.text, "segments": segments}
 
 
@@ -83,15 +95,7 @@ def _transcribe_full_chunks(audio_path: Path, client: OpenAI) -> dict:
                     timestamp_granularities=["segment"],
                 )
 
-            for s in (result.segments or []):
-                start = s["start"] if isinstance(s, dict) else s.start
-                end = s["end"] if isinstance(s, dict) else s.end
-                text = (s.get("text", "") if isinstance(s, dict) else (s.text or "")).strip()
-                all_segments.append({
-                    "start": start + offset,
-                    "end": end + offset,
-                    "text": text,
-                })
+            all_segments.extend(_segment_dict(s, offset) for s in (result.segments or []))
             all_text.append(result.text)
             offset += chunk_duration
 
