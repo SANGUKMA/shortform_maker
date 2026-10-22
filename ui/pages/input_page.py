@@ -46,11 +46,12 @@ def register():
                     upload_dir = OUTPUT_DIR / "uploads"
                     upload_dir.mkdir(parents=True, exist_ok=True)
                     dest = upload_dir / f.name
-                    data = await f.read()
-                    dest.write_bytes(data)
+                    # 메모리에 통째로 읽지 않고 1MB씩 디스크로 옮겨 쓴다 (수백 MB 영상도 서버 메모리 부족 없이)
+                    await f.save(dest)
+                    size = dest.stat().st_size
                     file_path_holder["path"] = str(dest)
-                    _log.info("Upload saved: %s (%d bytes)", dest, len(data))
-                    ui.notify(f"파일 업로드 완료: {f.name} ({len(data)/1024/1024:.1f}MB)", type="positive")
+                    _log.info("Upload saved: %s (%d bytes)", dest, size)
+                    ui.notify(f"파일 업로드 완료: {f.name} ({size/1024/1024:.1f}MB)", type="positive")
                 except Exception as ex:
                     import traceback
                     _log.error("Upload failed: %s\n%s", ex, traceback.format_exc())

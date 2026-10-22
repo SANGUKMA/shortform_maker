@@ -13,12 +13,25 @@ from pipeline.context import PipelineContext
 
 COOKIES_PATH = BASE_DIR / "cookies.txt"
 
+# YouTube가 서버(데이터센터) IP의 다운로드를 봇으로 보고 막을 때 yt-dlp가 내는 문구
+BOT_CHECK_MARKERS = ("Sign in to confirm you", "not a bot")
+
 
 def _cookies_args() -> list[str]:
     """cookies.txt가 있으면 --cookies 인자를 반환."""
     if COOKIES_PATH.exists():
         return ["--cookies", str(COOKIES_PATH)]
     return []
+
+
+def _raise_if_bot_check(stderr: str) -> None:
+    """YouTube 봇 확인에 막혔으면 해결 방법을 담은 오류를 낸다."""
+    if any(m in stderr for m in BOT_CHECK_MARKERS):
+        raise RuntimeError(
+            "YouTube가 이 서버의 다운로드를 막았습니다 (봇 확인 요구). "
+            "영상 파일을 직접 올려 주세요. "
+            "YouTube 링크는 Mac에서 실행 중인 앱(localhost:8080)에서 처리할 수 있습니다."
+        )
 
 
 async def run(ctx: PipelineContext, notify: Callable) -> None:
@@ -49,6 +62,9 @@ async def _download_youtube(ctx: PipelineContext, notify: Callable) -> None:
         None,
         lambda: subprocess.run(meta_cmd, capture_output=True, text=True, timeout=60),
     )
+    # 봇 확인에 막혔으면 다운로드까지 가지 않고 바로 안내
+    if meta_result.returncode != 0:
+        _raise_if_bot_check(meta_result.stderr)
     if meta_result.returncode == 0 and meta_result.stdout.strip():
         try:
             info = json.loads(meta_result.stdout)
@@ -80,6 +96,7 @@ async def _download_youtube(ctx: PipelineContext, notify: Callable) -> None:
     )
 
     if dl_result.returncode != 0:
+        _raise_if_bot_check(dl_result.stderr)
         raise RuntimeError(f"yt-dlp 다운로드 실패:\n{dl_result.stderr[-1000:]}")
 
     # 다운로드된 파일 찾기
