@@ -129,6 +129,7 @@ def register():
                 state["clip_count"] = count
                 state["video_aspect"] = aspect_radio.value
                 state["subtitle_enabled"] = subtitle_toggle.value
+                state["start_new"] = True  # /progress가 새 파이프라인을 시작하는 유일한 신호
 
                 ui.navigate.to("/progress")
 

@@ -18,9 +18,36 @@ STEP_NAMES = [
     "출력 준비",
 ]
 
-# 파이프라인 상태 추적 (중복 실행 방지 + 완료 감지)
-_running: dict[str, bool] = {}
-_completed: dict[str, bool] = {}
+# 실행 중/완료된 파이프라인 (project_id → (ctx, task))
+# 새로고침 시 같은 작업에 다시 연결하고, 태스크 참조를 유지해 GC로 사라지지 않게 한다.
+_pipelines: dict[str, tuple[PipelineContext, asyncio.Task]] = {}
+
+
+def _start_pipeline(state) -> tuple[PipelineContext, asyncio.Task]:
+    """새 파이프라인을 백그라운드 태스크로 시작하고 등록한다."""
+    # 끝난 작업은 정리 (결과 폴더도 새 실행 시작 시 삭제된다)
+    for pid in [pid for pid, (_, t) in _pipelines.items() if t.done()]:
+        del _pipelines[pid]
+
+    ctx = PipelineContext(
+        source=state["source"],
+        org_name=state.get("org_name", ""),
+        clip_duration=state.get("clip_duration", "short"),
+        clip_count=state.get("clip_count", "auto"),
+        video_aspect=state.get("video_aspect", "16:9"),
+        subtitle_enabled=state.get("subtitle_enabled", True),
+    )
+    state["project_id"] = ctx.project_id
+
+    async def run_in_background():
+        try:
+            await run_pipeline(ctx, on_progress=lambda c: None)
+        except Exception as e:
+            ctx.error = str(e)
+
+    task = asyncio.create_task(run_in_background())
+    _pipelines[ctx.project_id] = (ctx, task)
+    return ctx, task
 
 
 def register():
@@ -33,29 +60,23 @@ def register():
             ui.navigate.to("/")
             return
 
-        # 이미 실행 중인 프로젝트가 있으면 중복 방지
-        # 단, 같은 source로 새로 진입한 경우 이전 상태를 정리하고 재시작 허용
-        existing_id = state.get("project_id")
-        if existing_id and _running.get(existing_id):
-            # 실제로 활성 태스크가 있는지 확인 — 없으면 좀비 상태이므로 정리
-            _running.pop(existing_id, None)
-            _completed.pop(existing_id, None)
-            state.pop("project_id", None)
+        existing = _pipelines.get(state.get("project_id"))
+
+        if state.pop("start_new", False):
+            # 입력 페이지에서 "분석 시작" — 이 사용자의 이전 작업은 중단 (폴더도 새 실행이 삭제함)
+            if existing and not existing[1].done():
+                existing[0].error = "새 작업이 시작되어 중단되었습니다."
+                existing[1].cancel()
+            ctx, task = _start_pipeline(state)
+        elif existing:
+            # 새로고침·뒤로가기 — 기존 작업에 다시 연결
+            ctx, task = existing
+        else:
+            # 추적 중인 작업 없음 (서버 재시작 등) — 처음으로
+            ui.navigate.to("/")
+            return
 
         ui.dark_mode(True)
-
-        # 파이프라인 컨텍스트 생성
-        ctx = PipelineContext(
-            source=source,
-            org_name=state.get("org_name", ""),
-            clip_duration=state.get("clip_duration", "short"),
-            clip_count=state.get("clip_count", "auto"),
-            video_aspect=state.get("video_aspect", "16:9"),
-            subtitle_enabled=state.get("subtitle_enabled", True),
-        )
-        state["project_id"] = ctx.project_id
-        _running[ctx.project_id] = True
-        _completed[ctx.project_id] = False
 
         with ui.column().classes("mx-auto max-w-2xl w-full p-8 gap-4"):
             ui.label("처리 진행 중...").classes("text-3xl font-bold text-center w-full")
@@ -96,10 +117,8 @@ def register():
                     step_icons[i].props("name=radio_button_unchecked color=gray")
 
             # 완료 감지 → 결과 페이지로 이동 (UI 컨텍스트 안이므로 navigate 작동)
-            if _completed.get(ctx.project_id):
+            if task.done() and not ctx.error:
                 timer.deactivate()
-                _running.pop(ctx.project_id, None)
-                _completed.pop(ctx.project_id, None)
                 # 모든 아이콘을 완료 상태로
                 for icon in step_icons:
                     icon.props("name=check_circle color=green")
@@ -113,8 +132,6 @@ def register():
             elif ctx.error and not error_shown:
                 error_shown = True
                 timer.deactivate()
-                _running.pop(ctx.project_id, None)
-                _completed.pop(ctx.project_id, None)
                 with error_area:
                     ui.label(f"오류: {ctx.error[:300]}").classes("text-red-400 text-center w-full")
                     ui.button(
@@ -125,14 +142,3 @@ def register():
 
         # 0.5초마다 UI 업데이트
         timer = ui.timer(0.5, update_ui)
-
-        # 파이프라인을 백그라운드 태스크로 실행
-        async def run_in_background():
-            try:
-                await run_pipeline(ctx, on_progress=lambda c: None)
-                # 완료 플래그 설정 (타이머 콜백에서 감지하여 navigate 실행)
-                _completed[ctx.project_id] = True
-            except Exception as e:
-                ctx.error = str(e)
-
-        asyncio.create_task(run_in_background())
