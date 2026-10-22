@@ -49,8 +49,11 @@ def register():
                     ui.label("아래 버튼을 클릭하면 Google 로그인 페이지로 이동합니다.")
 
                     def do_auth():
+                        auth_url, oauth_state, code_verifier = get_auth_url()
                         state["oauth_return_to"] = f"/upload/{project_id}"
-                        auth_url = get_auth_url()
+                        # 콜백에서 요청 위조 확인(state)과 PKCE 토큰 교환(code_verifier)에 쓴다
+                        state["oauth_state"] = oauth_state
+                        state["oauth_code_verifier"] = code_verifier
                         ui.navigate.to(auth_url, new_tab=False)
 
                     ui.button("YouTube 인증", on_click=do_auth, icon="login").props(
@@ -187,38 +190,54 @@ def register():
                 ).props("size=lg outline")
 
     @ui.page("/oauth/callback")
-    async def oauth_callback():
-        """Google OAuth 콜백 — 인증 코드를 토큰으로 교환 후 리다이렉트."""
+    async def oauth_callback(code: str = "", state: str = "", error: str = ""):
+        """Google OAuth 콜백 — 인증 코드를 토큰으로 교환 후 리다이렉트.
+
+        code / state / error는 Google이 붙여 보낸 쿼리 파라미터다.
+        """
         ui.dark_mode(True)
         with ui.column().classes("mx-auto max-w-md w-full p-8 gap-4 items-center"):
             spinner = ui.spinner("dots", size="xl")
             status = ui.label("YouTube 인증 처리 중...").classes("text-center text-lg")
 
+        def fail(message: str):
+            spinner.set_visibility(False)
+            status.set_text(message)
+            status.classes(add="text-red-400")
+
         async def process_code():
             from providers.youtube import exchange_code
 
-            code = await ui.run_javascript(
-                "new URLSearchParams(window.location.search).get('code')"
-            )
+            user = app.storage.user
+            # 한 번 쓰면 버린다 (같은 인증 요청을 두 번 처리하지 않게)
+            expected_state = user.pop("oauth_state", None)
+            code_verifier = user.pop("oauth_code_verifier", None)
+
+            if error:
+                if error == "access_denied":
+                    fail("Google 로그인이 거부되었습니다. 동의 화면에서 '취소'를 눌렀거나, "
+                         "이 Google 계정이 OAuth 동의 화면의 테스트 사용자에 없을 수 있습니다.")
+                else:
+                    fail(f"Google 인증 오류: {error}")
+                return
             if not code:
-                spinner.set_visibility(False)
-                status.set_text("인증 코드를 받지 못했습니다.")
-                status.classes(add="text-red-400")
+                fail("인증 코드를 받지 못했습니다.")
+                return
+            if not expected_state or state != expected_state or not code_verifier:
+                fail("인증 요청이 만료되었거나 일치하지 않습니다. 업로드 페이지에서 다시 인증해 주세요.")
                 return
 
             try:
                 loop = asyncio.get_event_loop()
-                creds_dict = await loop.run_in_executor(None, exchange_code, code)
-                app.storage.user["youtube_creds"] = creds_dict
+                creds_dict = await loop.run_in_executor(None, exchange_code, code, code_verifier)
+                user["youtube_creds"] = creds_dict
 
                 status.set_text("인증 완료! 리다이렉트 중...")
                 status.classes(add="text-green-400")
 
-                return_to = app.storage.user.get("oauth_return_to", "/")
+                return_to = user.get("oauth_return_to", "/")
                 ui.navigate.to(return_to)
             except Exception as e:
-                spinner.set_visibility(False)
-                status.set_text(f"인증 실패: {e}")
-                status.classes(add="text-red-400")
+                fail(f"인증 실패: {e}")
 
         ui.timer(0.5, process_code, once=True)

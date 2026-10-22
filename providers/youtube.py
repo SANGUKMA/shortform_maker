@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -15,8 +16,13 @@ from config import settings
 
 _log = logging.getLogger(__name__)
 
+# Google이 돌려준 권한 목록이 요청과 달라도(동의 화면에서 일부 해제, 이전에 허용한 권한 포함)
+# oauthlib가 예외로 멈추지 않게 한다. 업로드 권한은 exchange_code에서 직접 확인한다.
+os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")
+
+UPLOAD_SCOPE = "https://www.googleapis.com/auth/youtube.upload"
 SCOPES = [
-    "https://www.googleapis.com/auth/youtube.upload",
+    UPLOAD_SCOPE,
     "https://www.googleapis.com/auth/youtube",
 ]
 
@@ -37,25 +43,43 @@ def _redirect_uri() -> str:
     return f"{settings.APP_URL}/oauth/callback"
 
 
-def get_auth_url() -> str:
-    """Google OAuth2 인증 URL 생성."""
+def get_auth_url() -> tuple[str, str, str]:
+    """Google OAuth2 인증 URL 생성.
+
+    Returns: (auth_url, state, code_verifier).
+    인증 URL에는 code_verifier에서 만든 PKCE 확인값이 붙으므로, state와 code_verifier를
+    사용자 세션에 보관했다가 콜백에서 exchange_code에 넘겨야 한다.
+    """
     flow = Flow.from_client_config(
         _client_config(), scopes=SCOPES, redirect_uri=_redirect_uri()
     )
-    auth_url, _ = flow.authorization_url(
+    auth_url, state = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
         prompt="consent",
     )
-    return auth_url
+    return auth_url, state, flow.code_verifier
 
 
-def exchange_code(code: str) -> dict:
-    """인증 코드를 토큰으로 교환, 직렬화 가능한 dict 반환."""
+def exchange_code(code: str, code_verifier: str) -> dict:
+    """인증 코드를 토큰으로 교환, 직렬화 가능한 dict 반환.
+
+    code_verifier는 get_auth_url이 돌려준 값이어야 한다 (없으면 Google이 invalid_grant로 거부).
+    """
     flow = Flow.from_client_config(
-        _client_config(), scopes=SCOPES, redirect_uri=_redirect_uri()
+        _client_config(), scopes=SCOPES, redirect_uri=_redirect_uri(),
+        code_verifier=code_verifier, autogenerate_code_verifier=False,
     )
     flow.fetch_token(code=code)
+
+    granted = flow.oauth2session.token.get("scope") or SCOPES
+    if isinstance(granted, str):
+        granted = granted.split()
+    if UPLOAD_SCOPE not in granted:
+        raise PermissionError(
+            "YouTube 업로드 권한이 허용되지 않았습니다. "
+            "다시 인증하면서 Google 동의 화면의 YouTube 권한을 모두 체크해 주세요."
+        )
     return _creds_to_dict(flow.credentials)
 
 
