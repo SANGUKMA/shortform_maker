@@ -55,8 +55,13 @@ async def run_pipeline(
 
     for step_num, name, step_fn in STEPS:
         # 자막 비활성화 시 step6 건너뛰기
+        # shorts/는 완료 후 정리되므로 결과물을 final/로 옮겨 둔다
         if step_num == 6 and not ctx.subtitle_enabled:
-            ctx.final_paths = list(ctx.short_paths)
+            ctx.final_paths = []
+            for i, short_path in enumerate(ctx.short_paths):
+                final_path = ctx.final_dir / f"final_{i+1:03d}.mp4"
+                shutil.move(str(short_path), str(final_path))
+                ctx.final_paths.append(final_path)
             continue
 
         ctx.update_progress(step_num, 0.0, f"{name} 시작...")
