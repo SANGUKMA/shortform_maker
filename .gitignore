@@ -5,3 +5,4 @@ __pycache__/
 token.pickle
 client_secret.json
 *.zip
+.nicegui/
