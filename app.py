@@ -1,4 +1,4 @@
-"""ClipForge — 롱폼→숏폼 자동 변환 서비스 (NiceGUI 앱)."""
+"""한방컷 – 쇼츠메이커 — 롱폼→숏폼 자동 변환 서비스 (NiceGUI 앱)."""
 import logging
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -17,7 +17,7 @@ upload_page.register()
 import os
 
 ui.run(
-    title="ClipForge - 롱폼을 숏폼으로",
+    title="한방컷 – 쇼츠메이커",
     host="0.0.0.0",
     port=int(os.getenv("PORT", 8080)),
     reload=False,

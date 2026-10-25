@@ -21,8 +21,8 @@ def register():
 
         with ui.column().classes("mx-auto max-w-2xl w-full p-8 gap-6"):
             # 헤더
-            ui.label("ClipForge").classes("text-4xl font-bold text-center w-full")
-            ui.label("롱폼 영상을 숏폼으로 자동 변환").classes(
+            ui.label("한방컷").classes("text-4xl font-bold text-center w-full")
+            ui.label("쇼츠메이커 · 긴 영상, 한방에 쇼츠로").classes(
                 "text-lg text-gray-400 text-center w-full"
             )
 
